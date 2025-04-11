@@ -15,24 +15,26 @@ public class ServletServer {
             System.out.println("Client connected");
 
             try (
-                InputStream inputStream = clientSocket.getInputStream();
-                OutputStream outputStream = clientSocket.getOutputStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                OutputStream output = clientSocket.getOutputStream()
             ){
-                // Request Line만 읽음
-                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
                 String requestLine = reader.readLine();
-                System.out.println("Request: " + requestLine);
+                if (requestLine == null || requestLine.isEmpty()) {
+                    clientSocket.close();
+                    continue;
+                }
 
-                // 간단한 경우 routing
+                HttpRequest req = new HttpRequest(requestLine, reader);
+                HttpResponse res = new HttpResponse(output);
+
                 MyServlet servlet;
-                if(requestLine.contains("/hello")) {
+                if(req.path.equals("/hello")) {
                     servlet = new Servlet();
                 } else {
                     servlet = new NotFoundServlet();    // 404 Not Found
                 }
 
-                // request 처리
-                servlet.service(inputStream, outputStream);
+                servlet.service(req, res);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
